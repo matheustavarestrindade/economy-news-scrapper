@@ -7,5 +7,4 @@ services:
       dockerfile: Dockerfile
     container_name: 'economy-news-scrapper'
     restart: always
-    ports:
-      - 3050:3050
+    network_mode: "host"
