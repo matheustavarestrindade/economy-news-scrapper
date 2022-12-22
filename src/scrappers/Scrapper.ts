@@ -1,7 +1,9 @@
 import { JSDOM } from "jsdom";
 import fetch from "cross-fetch";
 import { ScrappedNews } from "../database/documents/ScrappedNews";
-
+import last_scrapes from "./../last_scrape.json";
+import fs from "fs/promises";
+import { off } from "process";
 interface ScrapperProps {
     ID: string;
     name: string;
@@ -25,6 +27,7 @@ class Scrapper {
     protected is_api: boolean = false;
     protected render_js: boolean = false;
     protected api_method: "GET" | "POST" = "GET";
+
     constructor({ url, ID, name, is_api, render_js, api_method }: ScrapperProps) {
         this.ID = ID;
         this.url = url;
@@ -59,14 +62,22 @@ class Scrapper {
         }
         console.info(`Scraping ${this.name} finished`);
         console.info(`Saving ${result.length} news from ${this.name}...`);
-        await ScrappedNews.insertMany(
-            result.map((r) => {
-                return {
-                    ...r,
-                    from: this.ID,
-                };
-            })
-        );
+
+        (last_scrapes as any).scrapes[this.ID] = new Date().getTime();
+
+        try {
+            await fs.writeFile("./src/last_scrape.json", JSON.stringify(last_scrapes, null, 2));
+        } catch (error) {
+            console.error(`Error while saving last scrape time: ${error}`);
+        }
+
+        const results = result.map((r) => ({ ...r, from: this.ID }));
+
+        try {
+            await ScrappedNews.insertMany(results, { ordered: false });
+        } catch (err) {
+            console.error(`Error while saving ${this.name} news: ${err}`);
+        }
         console.info(`Saving ${result.length} news from ${this.name} finished`);
 
         return result;
@@ -104,9 +115,10 @@ class Scrapper {
 
     private async needsRefresh(): Promise<boolean> {
         const doc = await ScrappedNews.findOne({ from: this.ID }).sort({ createdAt: -1 }).limit(1);
-        if (!doc) return true;
-        if (doc.createdAt.getTime() + 1000 * 60 * 5 < new Date().getTime()) return true;
-        return false;
+        if (doc && doc.createdAt.getTime() + 1000 * 60 * 5 > new Date().getTime()) return false;
+        const lastScrapeValue = (last_scrapes as any)?.scrapes[this.ID] || 0;
+        if (lastScrapeValue + 1000 * 60 * 5 > new Date().getTime()) return false;
+        return true;
     }
 
     protected parseAPIData(data: Object): Promise<ScrappeResult[]> {

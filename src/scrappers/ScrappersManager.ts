@@ -12,12 +12,12 @@ class ScrappersManager {
     private scrappers: Scrapper[] = [];
     private UPDATE_DELAY = 1000 * 60 * 5; // 5 minutes
     constructor() {
+        this.scrappers.push(new MoneyTimesScrapper());
         this.scrappers.push(new CNNBrasilScrapper());
         this.scrappers.push(new G1GloboScrapper());
         this.scrappers.push(new InfoMoneyScrapper());
         this.scrappers.push(new UOLEconomiaScrapper());
         this.scrappers.push(new EstadaoScrapper());
-        this.scrappers.push(new MoneyTimesScrapper());
         this.scrappers.push(new ExameEconomiaScrapper());
         // this.scrappers.push(new R7EconomiaScrapper()); disabled for now (lots of shit ? )
     }
@@ -26,7 +26,6 @@ class ScrappersManager {
         for (const scrapper of this.scrappers) {
             console.log("====================================");
             await scrapper.scrape();
-            console.log("====================================");
         }
         setTimeout(() => this.start(), this.UPDATE_DELAY);
     }
