@@ -1,5 +1,3 @@
-Git Project Description: Economy News Scrapper
-
 # Project Overview:
 The Economy News Scrapper is a Node.js-based application that scrapes news articles from major news websites, summarizes the articles using ChatGPT, and extracts the most important topics. This project provides a seamless way to stay updated with the latest economic news by automating the process of gathering and summarizing articles from various sources.
 
