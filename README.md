@@ -1,9 +1,9 @@
 Git Project Description: Economy News Scrapper
 
-Project Overview:
+# Project Overview:
 The Economy News Scrapper is a Node.js-based application that scrapes news articles from major news websites, summarizes the articles using ChatGPT, and extracts the most important topics. This project provides a seamless way to stay updated with the latest economic news by automating the process of gathering and summarizing articles from various sources.
 
-Scripts:
+# Scripts:
 The project includes various npm scripts in the package.json file to streamline development and execution:
 
 - `build`: Compiles TypeScript files into JavaScript.
@@ -11,7 +11,7 @@ The project includes various npm scripts in the package.json file to streamline 
 - `dev-panel`: Launches the development server with nodemon for live-reloading and debugging features.
 - `dev`: Similar to `dev-panel` but with specific environment configurations.
 
-Environment Variables:
+# Environment Variables:
 The project relies on environment variables for configuration, which can be set in a `.env` file, like the provided `.env.example`. Key environment variables include:
 
 - `MONGO_DATABASE_NAME`: The name of the MongoDB database.
@@ -20,7 +20,7 @@ The project relies on environment variables for configuration, which can be set 
 - `OPENAI_API_KEY`: The API key for OpenAI integration.
 - `JWT_SECRET`: The secret key for JSON Web Token (JWT) generation.
 
-Usage:
+# Usage:
 To use this project, follow these steps:
 
 1. Clone the repository to your local machine.
