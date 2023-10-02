@@ -1,6 +1,8 @@
-import express, { Express, Router } from "express";
+import express, { Express } from "express";
 import cors from "cors";
-import NewsRouter from "./routers/NewsRouter";
+import * as trpcExpress from "@trpc/server/adapters/express";
+import { TRPCRouter } from "../trpc/TRPCAppRouter";
+import { ExpressContext as createContext } from "../trpc/context/ExpressContext";
 
 class RoutesManager {
     private server: Express;
@@ -13,19 +15,22 @@ class RoutesManager {
     }
 
     public async startServer() {
-        await this.registerRoutes();
-        await this.registerMiddlewares();
+        await this.registerTRPC();
 
         this.server.listen(this.server_port, () => {
             console.info(`Server started at port ${this.server_port}`);
         });
     }
 
-    private async registerRoutes() {
-        this.server.use("/news", NewsRouter);
+    private async registerTRPC() {
+        this.server.use(
+            "/trpc",
+            trpcExpress.createExpressMiddleware({
+                router: TRPCRouter,
+                createContext,
+            })
+        );
     }
-
-    private async registerMiddlewares() {}
 }
 
 export default RoutesManager;

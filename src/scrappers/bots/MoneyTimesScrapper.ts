@@ -17,13 +17,13 @@ class MoneyTimesScrapper extends Scrapper {
             const link_element = news.querySelector("a");
             const link = link_element?.getAttribute("href");
             if (!link) {
-                this.dontHaveOnList("link", index);
+                this.dontHaveOnList("link", index, link);
                 continue;
             }
 
             let description = news?.querySelector("h2")?.textContent;
             if (!description) {
-                this.dontHaveOnList("description", index);
+                this.dontHaveOnList("description", index, link);
                 continue;
             }
             description = this.cleanupText(description);
@@ -31,8 +31,7 @@ class MoneyTimesScrapper extends Scrapper {
             const img_element = news.querySelector("img");
             const img = img_element?.getAttribute("src");
             if (!img_element || !img) {
-                this.dontHaveOnList("image", index);
-                continue;
+                this.dontHaveOnList("image", index, link);
             }
 
             if (await this.hasURLOnDatabase(link)) continue;
@@ -40,7 +39,7 @@ class MoneyTimesScrapper extends Scrapper {
             const content = await this.getNewsContent(link);
 
             if (!content) {
-                this.dontHaveOnList("content", index);
+                this.dontHaveOnList("content", index, link);
                 continue;
             }
 
@@ -60,7 +59,7 @@ class MoneyTimesScrapper extends Scrapper {
         if (!document) return null;
         const content = document.querySelector(".single__text");
         if (!content) {
-            console.log(url);
+            this.logInfo("No content found on url: " + url);
             return null;
         }
         const paragraphs = content.querySelectorAll("p");

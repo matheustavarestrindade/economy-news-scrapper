@@ -18,31 +18,29 @@ class ExameEconomiaScrapper extends Scrapper {
             const partial_link = link_element?.getAttribute("href");
 
             if (!partial_link) {
-                this.dontHaveOnList("link", index);
+                this.dontHaveOnList("link", index, undefined);
                 continue;
             }
+            const link = partial_link.includes("http") ? partial_link : this.base_url + partial_link;
 
             const description = link_element?.textContent;
             if (!description) {
-                this.dontHaveOnList("description", index);
+                this.dontHaveOnList("description", index, link);
                 continue;
             }
 
             const img_element = news_item.querySelector("noscript img");
             const img = img_element?.getAttribute("src");
             if (!img_element || !img) {
-                this.dontHaveOnList("image", index);
-                continue;
+                this.dontHaveOnList("image", index, link);
             }
-
-            const link = partial_link.includes("http") ? partial_link : this.base_url + partial_link;
 
             if (await this.hasURLOnDatabase(link)) continue;
 
             const content = await this.getNewsContent(link);
 
             if (!content) {
-                this.dontHaveOnList("content", index);
+                this.dontHaveOnList("content", index, link);
                 continue;
             }
             scrappedResults.push({

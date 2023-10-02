@@ -1,11 +1,5 @@
 import { model, Schema, Types } from "mongoose";
 
-enum EScrappedNewsSentiment {
-    NEGATIVE = "NEGATIVE",
-    NEUTRAL = "NEUTRAL",
-    POSITIVE = "POSITIVE",
-}
-
 interface IScrappedNews {
     _id: Types.ObjectId;
     from: string;
@@ -15,7 +9,11 @@ interface IScrappedNews {
     image?: string;
     content?: string;
 
-    content_sentiment?: EScrappedNewsSentiment;
+    content_summary?: string;
+    isPlagiarism?: boolean;
+
+    stockCompanies?: Types.ObjectId[];
+    cryptoAssets?: Types.ObjectId[];
 
     createdAt: Date;
     updatedAt: Date;
@@ -28,11 +26,14 @@ const ScrappedNewsSchema = new Schema<IScrappedNews>(
         from: { type: String, required: true },
         title: { type: String, required: true },
 
-        image: { type: String, required: true },
+        image: { type: String, required: false },
 
         content: { type: String, required: true },
+        content_summary: { type: String, required: false },
+        isPlagiarism: { type: Boolean, required: false },
 
-        content_sentiment: { type: String, enum: Object.values(EScrappedNewsSentiment), required: false },
+        stockCompanies: [{ type: Types.ObjectId, ref: "StockCompany" }],
+        cryptoAssets: [{ type: Types.ObjectId, ref: "CryptoCoin" }],
     },
     { timestamps: true }
 );

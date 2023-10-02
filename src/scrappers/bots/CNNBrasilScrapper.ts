@@ -18,25 +18,25 @@ class CNNBrasilScrapper extends Scrapper {
             const link_element = news.querySelector("a");
             const link = link_element?.getAttribute("href");
             if (!link) {
-                this.dontHaveOnList("link", index);
+                this.dontHaveOnList("link", index, link);
                 continue;
             }
             const img_element = news.querySelector("img");
             const img = img_element?.getAttribute("src");
             if (!img_element || !img) {
-                this.dontHaveOnList("image", index);
+                this.dontHaveOnList("image", index, link);
                 continue;
             }
             const description = img_element?.getAttribute("title");
             if (!description) {
-                this.dontHaveOnList("description", index);
+                this.dontHaveOnList("description", index, link);
                 continue;
             }
             if (await this.hasURLOnDatabase(link)) continue;
 
             const content = await this.getNewsContent(link);
             if (!content) {
-                this.dontHaveOnList("content", index);
+                this.dontHaveOnList("content", index, link);
                 continue;
             }
 

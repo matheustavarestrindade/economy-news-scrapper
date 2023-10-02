@@ -6,43 +6,42 @@ class EstadaoScrapper extends Scrapper {
     }
 
     protected async parseHTMLData(document: Document): Promise<ScrappeResult[]> {
-        const news_list = document.querySelector(".lista")?.querySelectorAll(":scope > section");
+        const news_list = document.querySelector(".news-list")?.querySelectorAll(".noticias-mais-recenter--item");
         if (!news_list) throw new Error(`Error while parsing HTML data from ${this.name}: News list not found`);
 
         let scrappedResults = [];
 
         for (let index = 0; index < news_list.length; index++) {
             const news = news_list[index];
-            const link_element = news.querySelector(".link-title");
+            const link_element = news.querySelector(".content > a");
             const link = link_element?.getAttribute("href");
             if (!link) {
-                this.dontHaveOnList("link", index);
+                this.dontHaveOnList("link", index, link);
                 continue;
             }
 
             const description = link_element?.getAttribute("title");
             if (!description) {
-                this.dontHaveOnList("description", index);
+                this.dontHaveOnList("description", index, link);
                 continue;
             }
 
             const img_element = news.querySelector("img");
-            const img = img_element?.getAttribute("data-src-desktop");
-            if (!img_element || !img) {
-                this.dontHaveOnList("image", index);
-                continue;
-            }
+            let imgSrc = img_element?.getAttribute("data-srcset");
+            if (!img_element || !imgSrc) {
+                this.dontHaveOnList("image", index, link);
+            } else imgSrc = `https://${imgSrc.split(" ")[0].replace(/.+resizer\/.+\d\)\//, "")}`;
 
             if (await this.hasURLOnDatabase(link)) continue;
 
             const content = await this.getNewsContent(link);
 
             if (!content) {
-                this.dontHaveOnList("content", index);
+                this.dontHaveOnList("content", index, link);
                 scrappedResults.push({
                     title: description,
                     url: link,
-                    image: img,
+                    image: imgSrc,
                     content: "",
                 } as ScrappeResult);
                 continue;
@@ -51,7 +50,7 @@ class EstadaoScrapper extends Scrapper {
             scrappedResults.push({
                 title: description,
                 url: link,
-                image: img,
+                image: imgSrc,
                 content: content,
             } as ScrappeResult);
         }

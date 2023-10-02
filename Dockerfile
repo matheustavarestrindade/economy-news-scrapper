@@ -5,7 +5,7 @@ WORKDIR /app
 COPY ./src ./src
 COPY ./package.json ./package.json
 COPY ./tsconfig.json ./tsconfig.json
-COPY .env .env
+COPY .env.prod .env
 RUN npm install -g typescript
 RUN npm install -g ts-node
 RUN npm install

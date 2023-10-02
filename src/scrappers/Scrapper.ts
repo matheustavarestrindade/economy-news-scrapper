@@ -1,9 +1,11 @@
-import { JSDOM } from "jsdom";
+import { JSDOM, VirtualConsole } from "jsdom";
 import fetch from "cross-fetch";
 import { ScrappedNews } from "../database/documents/ScrappedNews";
 import last_scrapes from "./../last_scrape.json";
 import fs from "fs/promises";
-import { off } from "process";
+import SummaryNewsService from "../services/SummaryNewsService";
+import InformationExtractor from "../services/InformationExtractor";
+import { Types } from "mongoose";
 interface ScrapperProps {
     ID: string;
     name: string;
@@ -12,6 +14,19 @@ interface ScrapperProps {
     render_js?: boolean;
     api_method?: "GET" | "POST";
 }
+interface LastScrapes {
+    scrapes: {
+        CNNBrasil: number;
+        G1Globo: number;
+        InfoMoney: number;
+        UOLEconomia: number;
+        Estadao: number;
+        MoneyTimes: number;
+        ExameEconomia: number;
+    };
+}
+
+const lastScrapes: LastScrapes = last_scrapes;
 
 export interface ScrappeResult {
     title: string;
@@ -21,7 +36,7 @@ export interface ScrappeResult {
 }
 
 class Scrapper {
-    protected ID: string;
+    protected ID: "CNNBrasil" | "G1Globo" | "InfoMoney" | "UOLEconomia" | "Estadao" | "MoneyTimes" | "ExameEconomia";
     protected url: string;
     protected name: string;
     protected is_api: boolean = false;
@@ -29,62 +44,101 @@ class Scrapper {
     protected api_method: "GET" | "POST" = "GET";
 
     constructor({ url, ID, name, is_api, render_js, api_method }: ScrapperProps) {
-        this.ID = ID;
+        this.ID = ID as "CNNBrasil" | "G1Globo" | "InfoMoney" | "UOLEconomia" | "Estadao" | "MoneyTimes" | "ExameEconomia";
         this.url = url;
         this.name = name;
         this.is_api = is_api;
         this.render_js = render_js != undefined ? render_js : false;
         this.api_method = api_method != undefined ? api_method : "GET";
-        console.info(`Initializing ${this.name} scrapper`);
     }
 
     public async scrape(): Promise<ScrappeResult[]> {
         const needsRefresh = await this.needsRefresh();
         if (!needsRefresh) {
-            console.info(`No need to refresh ${this.name} news`);
+            this.logInfo(`No need to refresh ${this.name} news`);
             return [];
         }
-        console.info(`Scraping ${this.name}...`);
-        let result: ScrappeResult[] = [];
+        this.logInfo(`Scraping ${this.name}...`);
+        let scrappedResults: ScrappeResult[] = [];
         try {
             if (this.is_api) {
                 const jsonData = await this.getAPIData(this.url, this.api_method);
-                if (jsonData) result = await this.parseAPIData(jsonData);
+                if (jsonData) scrappedResults = await this.parseAPIData(jsonData);
             } else if (this.render_js) {
                 const jsonData = await this.getHTMLDataWithJavascript(this.url);
-                if (jsonData) result = await this.parseHTMLData(jsonData);
+                if (jsonData) scrappedResults = await this.parseHTMLData(jsonData);
             } else {
                 const HTMLDom = await this.getHTMLData(this.url);
-                if (HTMLDom) result = await this.parseHTMLData(HTMLDom);
+                if (HTMLDom) scrappedResults = await this.parseHTMLData(HTMLDom);
             }
         } catch (error) {
-            console.error(`Error while scraping ${this.name}: ${error}`);
+            this.logInfo(`Error while scraping ${this.name}: ${error}`);
         }
-        console.info(`Scraping ${this.name} finished`);
-        console.info(`Saving ${result.length} news from ${this.name}...`);
+        this.logInfo(`Scraping ${this.name} finished, start processing`);
 
-        (last_scrapes as any).scrapes[this.ID] = new Date().getTime();
+        lastScrapes.scrapes[this.ID] = new Date().getTime();
 
         try {
-            await fs.writeFile("./src/last_scrape.json", JSON.stringify(last_scrapes, null, 2));
+            await fs.writeFile("./src/last_scrape.json", JSON.stringify(lastScrapes, null, 2));
         } catch (error) {
-            console.error(`Error while saving last scrape time: ${error}`);
+            this.logInfo(`Error while saving last scrape time: ${error}`);
         }
 
-        const results = result.map((r) => ({ ...r, from: this.ID }));
+        for (const result of scrappedResults) {
+            let content_summary = "";
+            let isPlagiarism = false;
+            if (result.content) {
+                this.logInfo(`Sumarizing ${result.title}...`);
+                const summaryResult = await SummaryNewsService.summarizeNews(result.title, result.content);
+                content_summary = summaryResult.summary;
+                isPlagiarism = summaryResult.plagiarism;
+            }
 
-        try {
-            await ScrappedNews.insertMany(results, { ordered: false });
-        } catch (err) {
-            console.error(`Error while saving ${this.name} news: ${err}`);
+            let extractedCompanies: Types.ObjectId[] = [];
+            let extractedCrypto: Types.ObjectId[] = [];
+
+            try {
+                this.logInfo(`Extracting Company information from: ${this.shortName(result.title)}`);
+                extractedCompanies = await InformationExtractor.extrackStockNamesFromNews(result.title + " " + result.content);
+                this.logInfo(`Extracted Company information from: ${this.shortName(result.title)}`);
+                this.logInfo(`Extracting Crypto information from: ${this.shortName(result.title)}`);
+                extractedCrypto = await InformationExtractor.extractCryptoCoinNamesFromNews(result.title + " " + result.content);
+                this.logInfo(`Extracted Crypto information from: ${this.shortName(result.title)}`);
+            } catch (err) {
+                this.logInfo(`Error while extracting information from ${this.name} news: ${err}`);
+            }
+
+            try {
+                this.logInfo(`Saving news: ${this.shortName(result.title)}`);
+                await ScrappedNews.create({
+                    ...result,
+                    content_summary,
+                    isPlagiarism,
+                    from: this.ID,
+                    stockCompanies: extractedCompanies,
+                    cryptoAssets: extractedCrypto,
+                });
+                this.logInfo(`Saved news: ${this.shortName(result.title)}`);
+            } catch (err) {
+                this.logInfo(`Error while saving ${this.name} news: ${err}`);
+            }
         }
-        console.info(`Saving ${result.length} news from ${this.name} finished`);
 
-        return result;
+        this.logInfo(`Processing finished`);
+
+        return scrappedResults;
+    }
+
+    protected shortName(name: string): string {
+        return name.substring(0, 30) + "...";
     }
 
     protected async hasURLOnDatabase(url: string): Promise<boolean> {
         return (await ScrappedNews.exists({ url: url })) != undefined;
+    }
+
+    protected removeHTMLTags(text: string): string {
+        return text.replace(/<(.|\n)*?>/gi, "");
     }
 
     protected async getAPIData(url: string, method: string): Promise<Object | void> {
@@ -95,7 +149,7 @@ class Scrapper {
             const jsonData = (await data.json()) as Object;
             return jsonData;
         } catch (error) {
-            console.error(`Error while getting API data from ${this.name}: ${error}`);
+            this.logInfo(`Error while getting API data from ${this.name}: ${error}`);
         }
     }
 
@@ -103,9 +157,11 @@ class Scrapper {
         try {
             const data = await fetch(url);
             const htmlData = await data.text();
-            return new JSDOM(htmlData).window.document;
+            const virtualConsole = new VirtualConsole();
+            virtualConsole.on("error", () => {});
+            return new JSDOM(htmlData, { virtualConsole }).window.document;
         } catch (error) {
-            console.error(`Error while getting HTML data from ${this.name}: ${error}`);
+            this.logInfo(`Error while getting HTML data from ${this.name}: ${error}`);
         }
     }
 
@@ -129,8 +185,9 @@ class Scrapper {
         throw new Error(`parseHTMLData not implemented for ${this.name} scrapper`);
     }
 
-    protected dontHaveOnList(object_name: string, object_index: number) {
-        console.warn(`Error while parsing HTML data from ${this.name} ${object_name} not found on list item: ${object_index}`);
+    protected dontHaveOnList(object_name: string, object_index: number, link: string | undefined | null) {
+        this.logInfo(`Error while parsing HTML data from ${this.name} ${object_name} not found on list item: ${object_index}`);
+        this.logInfo(`URL: ${link ? link : this.url}`);
     }
 
     protected cleanupText(inputText: string): string {
@@ -164,6 +221,10 @@ class Scrapper {
         returnText = returnText.replace(/&lt;/gi, "<");
         returnText = returnText.replace(/&gt;/gi, ">");
         return returnText;
+    }
+
+    protected logInfo(message: string, ...optionalParams: any[]) {
+        console.info(`${this.ID}: ${message}`);
     }
 }
 

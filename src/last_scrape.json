@@ -1,11 +1,12 @@
 {
   "scrapes": {
-    "CNNBrasil": 1670449892160,
-    "G1Globo": 1670265219548,
-    "InfoMoney": 1670265219772,
-    "UOLEconomia": 1670265220149,
-    "Estadao": 1670449892713,
-    "MoneyTimes": 1670449892958,
-    "ExameEconomia": 1670449893661
+    "CNNBrasil": 1688152207168,
+    "G1Globo": 1688152207096,
+    "InfoMoney": 1688152206554,
+    "UOLEconomia": 1688152208808,
+    "Estadao": 1688152208818,
+    "MoneyTimes": 1688152207131,
+    "ExameEconomia": 1688152209913,
+    "BloombergLinea": 1688152207432
   }
 }
