@@ -4,6 +4,8 @@ import RoutesManager from "./routes/RoutesManager";
 import StockInfoRunnable from "./runnables/StockInfoRunnable";
 import CryptoInfoRunnable from "./runnables/CryptoInfoRunnable";
 var args = process.argv.slice(2);
+
+
 const START_SCRAPPER = args.find((arg) => arg.startsWith("--only-webpanel")) === undefined;
 
 class Main {
