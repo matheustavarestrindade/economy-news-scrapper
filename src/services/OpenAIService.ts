@@ -1,17 +1,19 @@
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_CONFIGURATION = new Configuration({ apiKey: OPENAI_API_KEY });
-const openai = new OpenAIApi(OPENAI_CONFIGURATION);
+const openai = new OpenAI({
+    apiKey: OPENAI_API_KEY,
+});
+
 
 class OpenAIService {
     public static async getCompletion(prompt: string, retries = 3): Promise<any> {
         try {
-            const response = await openai.createChatCompletion({
-                model: "gpt-3.5-turbo-0613",
+            const response = await openai.chat.completions.create({
+                model: "gpt-3.5-turbo",
                 messages: [{ role: "user", content: prompt }],
             });
-            return response.data.choices[0];
+            return response.choices[0].message;
         } catch (error) {
             if ("response" in (error as any)) {
                 const response = (error as { response: any }).response;
